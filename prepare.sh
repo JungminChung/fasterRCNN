@@ -1,0 +1,2 @@
+mkdir runs 
+mkdir weights
