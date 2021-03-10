@@ -1,4 +1,5 @@
 ### For SIXray dataset ###
+import os 
 import tqdm
 import json
 from pycocotools import coco
@@ -34,8 +35,9 @@ def evaluate(model, dataloader, args):
             }
             detections.append(detection)
     
-    json.dump(detections, open(args.coco_predic_path, 'w'))
-    coco_dets = coco_.loadRes(args.coco_predic_path)
+    json_path = os.path.join(args.working_dir, args.coco_predict_name)
+    json.dump(detections, open(json_path, 'w'))
+    coco_dets = coco_.loadRes(json_path)
     coco_eval = COCOeval(coco_, coco_dets, "bbox")
     coco_eval.evaluate()
     coco_eval.accumulate()
@@ -56,16 +58,14 @@ def test(model, image_path, args, epoch=None):
     pil_img = image
     image_draw = ImageDraw.Draw(pil_img)
     image = transforms.Compose([transforms.ToTensor()])(image)
-    # image = [image.to(args)]
     image = [image.to(args.device)]
 
     # Draw Prediction part 
     model.eval()
     predictions = model(image)[0]
 
-    for i in range(len(predictions['scores'])):
-        if predictions['scores'][i].item() < 0.20 : continue 
-        # if predictions['scores'][i].item() < args.conf_threshold : continue 
+    for i in range(len(predictions['scores'])): 
+        if predictions['scores'][i].item() < args.conf_threshold : continue 
         category_id    = int(predictions['labels'][i].item())
         score          = float("{:.2f}".format(predictions['scores'][i].item()))
         x1, y1, x2, y2 = predictions['boxes'][i].tolist()
@@ -102,7 +102,11 @@ def test(model, image_path, args, epoch=None):
     
     # Save part 
     if epoch is None : 
-        epoch = ''
-    img_save_folder = 'test_img'
-    save_path = os.path.join(img_save_folder, file_name+f'_{epoch}.jpg')
-    pil_img.save(save_path)
+        pil_img.save(f'./{file_name}.jpg')
+        import os 
+        abs_path = os.path.abspath('.')
+        print(f'Results image saved in {abs_path}')
+    else : 
+        numbering = str(epoch).zfill(3)
+        save_path = os.path.join(args.test_img_dir, f'{numbering}_{file_name}.jpg')
+        pil_img.save(save_path)
