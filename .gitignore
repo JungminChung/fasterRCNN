@@ -2,6 +2,7 @@ test_img
 weights
 test.py
 runs
+docker.sh
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,linux,vscode,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,linux,vscode,python
