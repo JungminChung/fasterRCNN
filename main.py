@@ -163,7 +163,7 @@ def main():
             loss_obj = loss_dict['loss_objectness'].item()
             loss_rpn_reg = loss_dict['loss_rpn_box_reg'].item()
 
-            progress.set_description(f'Train {epoch} / {args.epochs}, lr : {optimizer.param_groups[0]['lr']}' +
+            progress.set_description(f'Train {epoch} / {args.epochs}, lr : {optimizer.param_groups[0]["lr"]}' +
                                     f'Loss : [TT]{losses:.3f}, [HC]{loss_cls:.3f}, [HR]{loss_reg:.3f}, ' +
                                     f'[RO]{loss_obj:.3f}, [RR]{loss_rpn_reg:.3f} ')
             
