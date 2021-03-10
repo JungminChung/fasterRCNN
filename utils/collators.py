@@ -19,7 +19,7 @@ def collate_sixray(batch):
     targets = []
     for i in range(batch_size):
         t = {} 
-        t['boxes'] = torch.tensor([0, 0, 1, 1], dtype=torch.float32).expand(max_obj_num, 4)
+        t['boxes'] = torch.tensor([0, 0, 1, 1], dtype=torch.float32).repeat(max_obj_num, 1)
         t['labels'] = torch.zeros(max_obj_num, dtype=torch.int64)
 
         for j in range(len(annots[i])):
