@@ -28,10 +28,12 @@ from torch.nn.parallel import DataParallel as DP
 # from torch.nn.parallel import DistributedDataParallel as DDP
 # from torch.utils.data.distributed import DistributedSampler
 
+from models.AAA import AAA 
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=140)
-    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--batch_size', type=int, default=12)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--momentum', type=float, default=0.9)
     parser.add_argument('--weight_decay', type=float, default=0.005)
@@ -41,7 +43,7 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='sixray', help='sixray / coco')
     parser.add_argument('--model', type=str, default='res34')
     parser.add_argument('--results_root', type=str, default='runs')
-    parser.add_argument('--anchor_init_size', type=int, default='4')
+    parser.add_argument('--anchor_init_size', type=int, default=16)
 
     parser.add_argument('--img_min_size', type=int, default=600)
     parser.add_argument('--img_max_size', type=int, default=1000)
@@ -55,6 +57,16 @@ def parse_args():
     parser.add_argument('--model_save_folder', type=str, default='weights')
     parser.add_argument('--test_img_name', type=str, default='')
     parser.add_argument('--test_img_folder', type=str, default='../SIXray/eval/image')
+
+    # attention 
+    parser.add_argument('--intra_identity', action='store_true')
+    parser.add_argument('--inter_identity', action='store_true')
+    
+    parser.add_argument('--mix_inter_intra', type=str, default='avg', 
+                        help='avg / else')
+
+    # test 
+    parser.add_argument('--_draw_atten_img', action='store_true')
 
     return parser.parse_args()
 
@@ -106,17 +118,21 @@ def main():
     # Models 
     if args.model == 'res34': 
         backbone = torchvision.models.resnet34(pretrained=True) # res 34
+        backbone = get_resent_features(backbone)
         out_ch = 512 # resnet18,34 : 512 
     elif args.model == 'res50':
         backbone = torchvision.models.resnet50(pretrained=True) # res 50 
+        backbone = get_resent_features(backbone)
         out_ch = 2048 # resnet50~152 : 2048
+    elif args.model == 'res34AAA':
+        backbone = AAA('res34', True, args)
+        out_ch = 512 # resnet18,34 : 512 
     else : 
         assert()
 
     # Anchor size : ((size, size*2, size*4, size*8, size*16), )
     anchor_size = (tuple(int(args.anchor_init_size * math.pow(2, i)) for i in range(5)), )
 
-    backbone = get_resent_features(backbone)
     backbone.out_channels = out_ch
 
     anchor_generator = AnchorGenerator(sizes=anchor_size,
@@ -143,6 +159,7 @@ def main():
     
     # train 
     global_step = 0
+    accuracies = {}
     for epoch in range(1, args.epochs+1):
         progress = tqdm.tqdm(train_loader)
         for images, targets, _ in progress:
@@ -163,7 +180,7 @@ def main():
             loss_obj = loss_dict['loss_objectness'].item()
             loss_rpn_reg = loss_dict['loss_rpn_box_reg'].item()
 
-            progress.set_description(f'Train {epoch} / {args.epochs}, lr : {optimizer.param_groups[0]["lr"]}' +
+            progress.set_description(f'Train {epoch} / {args.epochs}, lr : {optimizer.param_groups[0]["lr"]} ' +
                                     f'Loss : [TT]{losses:.3f}, [HC]{loss_cls:.3f}, [HR]{loss_reg:.3f}, ' +
                                     f'[RO]{loss_obj:.3f}, [RR]{loss_rpn_reg:.3f} ')
             
@@ -172,7 +189,7 @@ def main():
                        os.path.join(args.weights_dir, f'{args.model}_{epoch}.ckpt'))
                        
         if epoch % args.eval_epoch == 0 : 
-            evaluate(model, eval_loader, args)
+            accuracies = evaluate(model, eval_loader, args, epoch, accs=accuracies, update_acc=True)
             if args.test_img_name == '': 
                 image_path = os.path.join(args.test_img_folder, 
                                           random.sample(os.listdir(args.test_img_folder), 1)[0])
@@ -189,6 +206,11 @@ def main():
 
         schedular.step()
 
+    ## Evaluate rankings 
+    accuracies = sorted(accuracies.items(), key=lambda x: x[1], reverse=True)
+    print('##### TOP 3 models by iou 0.5 value #####')
+    for i in range(3) : 
+        print(f'TOP {i+1} : epoch {accuracies[i][0]}, accuracy {accuracies[i][1]}')
 
 if __name__=='__main__':
     main()
