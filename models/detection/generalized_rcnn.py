@@ -90,7 +90,30 @@ class GeneralizedRCNN(nn.Module):
                     raise ValueError("All bounding boxes should have positive height and width."
                                      " Found invalid box {} for target at index {}."
                                      .format(degen_bb, target_idx))
-
+        # import torchvision
+        # from PIL import Image, ImageDraw, ImageFont
+        # import numpy as np 
+        # def inverse_normalize(tensor, mean, std):
+        #     for t, m, s in zip(tensor, mean, std):
+        #         t.mul_(s).add_(m)
+        #     return tensor
+        # image = images.tensors[0]
+        # image = inverse_normalize(tensor=image, 
+        #                           mean=(0.485, 0.456, 0.406), 
+        #                           std=(0.229, 0.224, 0.225))
+        # torchvision.utils.save_image(image, 'img_origin.jpg')
+        # image_pil = torchvision.transforms.ToPILImage()(image)
+        # draw_pil = ImageDraw.Draw(image_pil)
+        # CLASS_NAME = ['BACKGROUND','Gun', 'Knife', 'Wrench', 'Pliers', 'Scissors', 'Hammer']
+        # target = targets[0]
+        # for k in range(len(target['boxes'])):
+        #     box_st = tuple(target['boxes'][k].numpy()[:2])
+        #     box_ed = tuple(target['boxes'][k].numpy()[2:])
+        #     draw_pil.rectangle([box_st, box_ed], outline=(255, 0, 0), width=1)
+        #     draw_pil.text(box_st, CLASS_NAME[target['labels'][k].item()], 
+        #                     font=ImageFont.truetype("./misc/gulim.ttf", 48), 
+        #                     fill=(255,255,255))
+        # image_pil.save('img_pil.jpg')
         features = self.backbone(images.tensors)
         if isinstance(features, torch.Tensor):
             features = OrderedDict([('0', features)])
