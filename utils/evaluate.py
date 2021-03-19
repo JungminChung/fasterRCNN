@@ -5,7 +5,7 @@ import json
 from pycocotools import coco
 from pycocotools.cocoeval import COCOeval
 
-def evaluate(model, dataloader, args): 
+def evaluate(model, dataloader, args, epoch, accs=None, update_acc=False): 
     coco_ = coco.COCO(args.coco_target_path) # TODO : This makes noise on run terminal. have to extract to out side of code file 
 
     detections = [] 
@@ -42,6 +42,8 @@ def evaluate(model, dataloader, args):
     coco_eval.evaluate()
     coco_eval.accumulate()
     coco_eval.summarize()
+    if update_acc :
+        return accs[epoch] = coco_eval.stats[1] # 0.5 iou value 
 
 
 def test(model, image_path, args, epoch=None):
